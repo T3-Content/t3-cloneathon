@@ -235,8 +235,10 @@ export const getQualifiedSubmissionCounts = query({
 
 // Get submissions for judging (qualified, unclaimed or claimed by current judge)
 export const getSubmissionsForJudging = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
     const identity = await requireAdmin(ctx);
 
     const submissions = await ctx.db
@@ -255,13 +257,28 @@ export const getSubmissionsForJudging = query({
     );
 
     // Sort by whether it's claimed by current judge (claimed first), then by creation time
-    return available.sort((a, b) => {
+    const sorted = available.sort((a, b) => {
       if (a.judgeId === identity.subject && b.judgeId !== identity.subject)
         return -1;
       if (a.judgeId !== identity.subject && b.judgeId === identity.subject)
         return 1;
       return b.createdAt - a.createdAt;
     });
+
+    // Apply pagination manually since we can't use .paginate() after filtering
+    const { numItems, cursor } = args.paginationOpts;
+    const startIndex = cursor ? parseInt(cursor) : 0;
+    const endIndex = startIndex + numItems;
+    const page = sorted.slice(startIndex, endIndex);
+
+    const isDone = endIndex >= sorted.length;
+    const continueCursor = isDone ? null : endIndex.toString();
+
+    return {
+      page,
+      isDone,
+      continueCursor,
+    };
   },
 });
 

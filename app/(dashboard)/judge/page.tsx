@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { SubmissionCard } from "./submission-card";
@@ -15,7 +15,16 @@ export default function JudgePage() {
   const submissionCounts = useQuery(
     api.submission.getQualifiedSubmissionCounts
   );
-  const submissions = useQuery(api.submission.getSubmissionsForJudging);
+
+  const {
+    results: submissions,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.submission.getSubmissionsForJudging,
+    {},
+    { initialNumItems: 10 }
+  );
 
   // Check if user is admin
   const isAdmin = user?.publicMetadata?.role === "admin";
@@ -92,7 +101,7 @@ export default function JudgePage() {
         </div>
       </div>
 
-      {!displaySubmissions ? (
+      {status === "LoadingFirstPage" ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -122,6 +131,23 @@ export default function JudgePage() {
               <p className="text-muted-foreground">
                 No qualified submissions available for judging.
               </p>
+            </div>
+          )}
+
+          {status === "CanLoadMore" && !specificSubmissionId && (
+            <div className="flex justify-center py-6">
+              <button
+                onClick={() => loadMore(10)}
+                className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Load More
+              </button>
+            </div>
+          )}
+
+          {status === "LoadingMore" && (
+            <div className="flex justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           )}
         </div>
