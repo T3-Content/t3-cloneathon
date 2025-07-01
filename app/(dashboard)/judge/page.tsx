@@ -2,81 +2,28 @@
 
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { SubmissionCard } from "./submission-card";
-import { SubmissionFilters } from "./submission-filters";
 
 export default function JudgePage() {
   const { user } = useUser();
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const specificSubmissionId = searchParams.get("id");
 
-  const submissionCounts = useQuery(api.submission.getSubmissionCounts);
-
-  // Initialize filters from URL query parameters
-  const [filters, setFilters] = useState({
-    status:
-      (searchParams.get("status") as "in-progress" | "submitted" | null) ||
-      undefined,
-    reviewed:
-      searchParams.get("reviewed") === "true"
-        ? true
-        : searchParams.get("reviewed") === "false"
-          ? false
-          : undefined,
-    score: searchParams.get("score")
-      ? (parseInt(searchParams.get("score")!) as
-          | 1
-          | 2
-          | 3
-          | 4
-          | 5
-          | 6
-          | 7
-          | 8
-          | 9
-          | 10)
-      : undefined,
-  });
-
-  // Update URL when filters change
-  const handleFiltersChange = (newFilters: typeof filters) => {
-    setFilters(newFilters);
-
-    const params = new URLSearchParams();
-
-    if (newFilters.status) {
-      params.set("status", newFilters.status);
-    }
-
-    if (newFilters.reviewed !== undefined) {
-      params.set("reviewed", newFilters.reviewed.toString());
-    }
-
-    if (newFilters.score !== undefined) {
-      params.set("score", newFilters.score.toString());
-    }
-
-    const queryString = params.toString();
-    const newUrl = queryString ? `?${queryString}` : "/judge";
-
-    router.replace(newUrl, { scroll: false });
-  };
+  const submissionCounts = useQuery(
+    api.submission.getQualifiedSubmissionCounts
+  );
+  const submissions = useQuery(api.submission.getSubmissionsForJudging);
 
   // Check if user is admin
   const isAdmin = user?.publicMetadata?.role === "admin";
 
-  const {
-    results: submissions,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
-    api.submission.getAllSubmissions,
-    { filter: filters },
-    { initialNumItems: 10 }
-  );
+  // If a specific submission ID is provided, filter to just that submission
+  const displaySubmissions = specificSubmissionId
+    ? submissions?.filter((s) => s._id === specificSubmissionId)
+    : submissions;
 
   // Redirect if not admin
   useEffect(() => {
@@ -108,53 +55,73 @@ export default function JudgePage() {
             Submission Judging
           </h1>
           <p className="text-muted-foreground">
-            Review and evaluate all competition submissions.
+            Review and evaluate qualified competition submissions.
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Only showing submissions that have video, GitHub link, and are
+            submitted.
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-muted-foreground mb-1">Reviewed</p>
-          <p className="text-2xl font-bold text-foreground">
-            {submissionCounts?.reviewed ?? "-"}/
-            {submissionCounts?.submitted ?? "-"}
-          </p>
+        <div className="flex flex-col items-end gap-4">
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground mb-1">Reviewed</p>
+            <p className="text-2xl font-bold text-foreground">
+              {submissionCounts?.reviewed ?? "-"}/
+              {submissionCounts?.submitted ?? "-"}
+            </p>
+          </div>
+          <a
+            href="/judge/all-submissions"
+            className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
+          >
+            View All Submissions
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
+            </svg>
+          </a>
         </div>
       </div>
 
-      <SubmissionFilters
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-      />
-
-      {status === "LoadingFirstPage" ? (
+      {!displaySubmissions ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : (
         <div className="space-y-6">
-          {submissions?.map((submission) => (
-            <SubmissionCard key={submission._id} submission={submission} />
+          {displaySubmissions?.map((submission) => (
+            <SubmissionCard
+              key={submission._id}
+              submission={submission}
+              currentJudgeId={user.id}
+            />
           ))}
 
-          {submissions?.length === 0 && (
+          {displaySubmissions?.length === 0 && specificSubmissionId && (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No submissions found.</p>
+              <p className="text-muted-foreground mb-4">
+                This submission doesn't exist or doesn't qualify for judging.
+              </p>
+              <a href="/judge" className="text-primary hover:underline">
+                Back to all qualified submissions
+              </a>
             </div>
           )}
 
-          {status === "CanLoadMore" && (
-            <div className="flex justify-center py-6">
-              <button
-                onClick={() => loadMore(10)}
-                className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Load More
-              </button>
-            </div>
-          )}
-
-          {status === "LoadingMore" && (
-            <div className="flex justify-center py-6">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          {displaySubmissions?.length === 0 && !specificSubmissionId && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                No qualified submissions available for judging.
+              </p>
             </div>
           )}
         </div>
