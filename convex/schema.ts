@@ -24,6 +24,7 @@ export default defineSchema({
 
     // Admin judging fields
     reviewed: v.optional(v.boolean()),
+    judgeId: v.optional(v.string()), // ID of the judge who claimed this submission
     score: v.optional(
       v.union(
         v.literal(1),

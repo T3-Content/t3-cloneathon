@@ -5,13 +5,17 @@ interface SubmissionFiltersProps {
     status: "in-progress" | "submitted" | undefined;
     reviewed: boolean | undefined;
     score: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | undefined;
+    hasVideo?: boolean | undefined;
+    hasGithub?: boolean | undefined;
   };
   onFiltersChange: (filters: any) => void;
+  showAdditionalFilters?: boolean;
 }
 
 export function SubmissionFilters({
   filters,
   onFiltersChange,
+  showAdditionalFilters = false,
 }: SubmissionFiltersProps) {
   const updateFilter = (key: string, value: any) => {
     onFiltersChange({
@@ -25,13 +29,17 @@ export function SubmissionFilters({
       status: undefined,
       reviewed: undefined,
       score: undefined,
+      hasVideo: undefined,
+      hasGithub: undefined,
     });
   };
 
   const hasActiveFilters =
     filters.status ||
     filters.reviewed !== undefined ||
-    filters.score !== undefined;
+    filters.score !== undefined ||
+    filters.hasVideo !== undefined ||
+    filters.hasGithub !== undefined;
 
   return (
     <div className="bg-muted/50 rounded-lg p-4 mb-6">
@@ -115,6 +123,68 @@ export function SubmissionFilters({
             <option value="10">10 only</option>
           </select>
         </div>
+
+        {showAdditionalFilters && (
+          <>
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="video-filter"
+                className="text-sm text-muted-foreground"
+              >
+                Video:
+              </label>
+              <select
+                id="video-filter"
+                value={
+                  filters.hasVideo === undefined
+                    ? ""
+                    : filters.hasVideo.toString()
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  updateFilter(
+                    "hasVideo",
+                    value === "" ? undefined : value === "true"
+                  );
+                }}
+                className="text-sm border border-border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">All</option>
+                <option value="true">Has Video</option>
+                <option value="false">No Video</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="github-filter"
+                className="text-sm text-muted-foreground"
+              >
+                GitHub:
+              </label>
+              <select
+                id="github-filter"
+                value={
+                  filters.hasGithub === undefined
+                    ? ""
+                    : filters.hasGithub.toString()
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  updateFilter(
+                    "hasGithub",
+                    value === "" ? undefined : value === "true"
+                  );
+                }}
+                className="text-sm border border-border rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">All</option>
+                <option value="true">Has GitHub</option>
+                <option value="false">No GitHub</option>
+              </select>
+            </div>
+          </>
+        )}
 
         {hasActiveFilters && (
           <button

@@ -20,6 +20,7 @@ type Submission = {
   reviewed?: boolean;
   score?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   judgeNotes?: string;
+  judgeId?: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -176,18 +177,60 @@ function ProjectTabs({ submissions }: TabContentProps) {
 
 interface SubmissionCardProps {
   submission: Submission;
+  currentJudgeId?: string;
 }
 
-export function SubmissionCard({ submission }: SubmissionCardProps) {
+export function SubmissionCard({
+  submission,
+  currentJudgeId,
+}: SubmissionCardProps) {
   const updateJudging = useMutation(api.submission.updateSubmissionJudging);
   const unsetScore = useMutation(api.submission.unsetSubmissionScore);
+  const claimSubmission = useMutation(api.submission.claimSubmission);
+  const releaseSubmissionClaim = useMutation(
+    api.submission.releaseSubmissionClaim
+  );
+
   const [notes, setNotes] = useState(submission.judgeNotes || "");
   const [selectedScore, setSelectedScore] = useState<
     1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | null
   >(submission.score || null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isClaimedByCurrentJudge = submission.judgeId === currentJudgeId;
+  const isClaimedByOther = submission.judgeId && !isClaimedByCurrentJudge;
+
+  const handleClaim = async () => {
+    try {
+      setIsClaiming(true);
+      await claimSubmission({
+        submissionId: submission._id,
+      });
+    } catch (error) {
+      console.error("Failed to claim submission:", error);
+      alert(
+        "Failed to claim submission. It may have been claimed by another judge."
+      );
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  const handleReleaseClaim = async () => {
+    try {
+      setIsClaiming(true);
+      await releaseSubmissionClaim({
+        submissionId: submission._id,
+      });
+    } catch (error) {
+      console.error("Failed to release claim:", error);
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   const debouncedSaveNotes = useCallback(
     (value: string) => {
@@ -268,7 +311,9 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
   };
 
   return (
-    <div className="bg-card rounded-lg shadow-md border border-border p-6">
+    <div
+      className={`bg-card rounded-lg shadow-md border border-border p-6 ${isClaimedByOther ? "opacity-60" : ""}`}
+    >
       <div className="flex justify-between items-start mb-6">
         <div>
           <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -316,11 +361,78 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
                 Score: {submission.score}/10
               </span>
             )}
+            {isClaimedByCurrentJudge && (
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                Your Claim
+              </span>
+            )}
+            {isClaimedByOther && (
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
+                Claimed by Another Judge
+              </span>
+            )}
           </div>
         </div>
 
         {/* Project Links moved to top right */}
         <div className="flex items-center gap-4 text-sm">
+          {/* Claim/Release buttons */}
+          {currentJudgeId && !isClaimedByOther && (
+            <div>
+              {!isClaimedByCurrentJudge ? (
+                <button
+                  onClick={handleClaim}
+                  disabled={isClaiming}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {isClaiming ? (
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary-foreground"></div>
+                  ) : (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
+                    </svg>
+                  )}
+                  Claim for Review
+                </button>
+              ) : (
+                <button
+                  onClick={handleReleaseClaim}
+                  disabled={isClaiming}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted text-muted-foreground rounded-md hover:bg-muted/80 transition-colors disabled:opacity-50"
+                >
+                  {isClaiming ? (
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-muted-foreground"></div>
+                  ) : (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                      />
+                    </svg>
+                  )}
+                  Release Claim
+                </button>
+              )}
+            </div>
+          )}
+
           <a
             href={submission.githubUrl}
             target="_blank"
@@ -443,82 +555,87 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
       {/* Tabbed Project Content */}
       <ProjectTabs submissions={submission} />
 
-      {/* Judge Notes */}
-      <div className="mb-4">
-        <label
-          htmlFor={`notes-${submission._id}`}
-          className="block text-sm font-medium text-foreground mb-2"
-        >
-          Judge Notes
-          {isUpdating && (
-            <span className="ml-2 text-xs text-muted-foreground">
-              (saving...)
-            </span>
-          )}
-        </label>
-        <textarea
-          id={`notes-${submission._id}`}
-          value={notes}
-          onChange={(e) => handleNotesChange(e.target.value)}
-          rows={3}
-          className="w-full border border-border rounded-md px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          placeholder="Add your judging notes here..."
-        />
-      </div>
-
-      {/* Score Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-foreground mb-3">
-          Score (1-10)
-        </label>
-        <div className="flex gap-2 flex-wrap">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
-            <button
-              key={score}
-              onClick={() =>
-                handleScoreSelect(
-                  score as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
-                )
-              }
-              className={`w-10 h-10 rounded-lg border-2 transition-all duration-200 font-medium ${
-                selectedScore === score
-                  ? "bg-primary text-primary-foreground border-primary shadow-md"
-                  : "bg-background text-foreground border-border hover:border-primary hover:bg-primary/10"
-              }`}
+      {/* Show judging controls only if claimed by current judge or unclaimed */}
+      {(!submission.judgeId || isClaimedByCurrentJudge) && (
+        <>
+          {/* Judge Notes */}
+          <div className="mb-4">
+            <label
+              htmlFor={`notes-${submission._id}`}
+              className="block text-sm font-medium text-foreground mb-2"
             >
-              {score}
-            </button>
-          ))}
-        </div>
-      </div>
+              Judge Notes
+              {isUpdating && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  (saving...)
+                </span>
+              )}
+            </label>
+            <textarea
+              id={`notes-${submission._id}`}
+              value={notes}
+              onChange={(e) => handleNotesChange(e.target.value)}
+              rows={3}
+              className="w-full border border-border rounded-md px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Add your judging notes here..."
+            />
+          </div>
 
-      {/* Submit Review Button */}
-      <div className="flex justify-between items-center">
-        <div className="text-xs text-muted-foreground">
-          Created: {new Date(submission.createdAt).toLocaleDateString()} |
-          Updated: {new Date(submission.updatedAt).toLocaleDateString()}
-        </div>
+          {/* Score Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-foreground mb-3">
+              Score (1-10)
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+                <button
+                  key={score}
+                  onClick={() =>
+                    handleScoreSelect(
+                      score as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+                    )
+                  }
+                  className={`w-10 h-10 rounded-lg border-2 transition-all duration-200 font-medium ${
+                    selectedScore === score
+                      ? "bg-primary text-primary-foreground border-primary shadow-md"
+                      : "bg-background text-foreground border-border hover:border-primary hover:bg-primary/10"
+                  }`}
+                >
+                  {score}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <div className="flex flex-col items-end gap-1">
-          <button
-            onClick={handleSubmitReview}
-            disabled={isSubmitting || submission.reviewed || !selectedScore}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-              submission.reviewed
-                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                : !selectedScore
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-            }`}
-          >
-            {isSubmitting
-              ? "Submitting..."
-              : submission.reviewed
-                ? "Review Submitted"
-                : "Submit Review"}
-          </button>
-        </div>
-      </div>
+          {/* Submit Review Button */}
+          <div className="flex justify-between items-center">
+            <div className="text-xs text-muted-foreground">
+              Created: {new Date(submission.createdAt).toLocaleDateString()} |
+              Updated: {new Date(submission.updatedAt).toLocaleDateString()}
+            </div>
+
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={handleSubmitReview}
+                disabled={isSubmitting || submission.reviewed || !selectedScore}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  submission.reviewed
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    : !selectedScore
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
+              >
+                {isSubmitting
+                  ? "Submitting..."
+                  : submission.reviewed
+                    ? "Review Submitted"
+                    : "Submit Review"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
