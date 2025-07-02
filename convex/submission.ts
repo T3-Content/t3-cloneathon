@@ -256,8 +256,11 @@ export const getSubmissionsForJudging = query({
       (s) => !s.judgeId || s.judgeId === identity.subject
     );
 
+    // Remove submissions that are already reviewed
+    const unreviewed = available.filter((s) => !s.reviewed);
+
     // Sort by whether it's claimed by current judge (claimed first), then by creation time
-    const sorted = available.sort((a, b) => {
+    const sorted = unreviewed.sort((a, b) => {
       if (a.judgeId === identity.subject && b.judgeId !== identity.subject)
         return -1;
       if (a.judgeId !== identity.subject && b.judgeId === identity.subject)
@@ -272,7 +275,7 @@ export const getSubmissionsForJudging = query({
     const page = sorted.slice(startIndex, endIndex);
 
     const isDone = endIndex >= sorted.length;
-    const continueCursor = isDone ? null : endIndex.toString();
+    const continueCursor = isDone ? undefined : endIndex.toString();
 
     return {
       page,
