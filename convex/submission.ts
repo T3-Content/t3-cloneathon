@@ -298,20 +298,6 @@ export const getSubmissionForJudging = query({
       return null;
     }
 
-    // Check if submission is qualified (has video, github, and is submitted)
-    if (
-      !submission.videoOverviewUrl ||
-      !submission.githubUrl ||
-      submission.status !== "submitted"
-    ) {
-      return null;
-    }
-
-    // Check if submission is available for this judge (unclaimed or claimed by current judge)
-    if (submission.judgeId && submission.judgeId !== identity.subject) {
-      return null;
-    }
-
     return submission;
   },
 });
