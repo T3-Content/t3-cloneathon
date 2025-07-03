@@ -178,11 +178,13 @@ function ProjectTabs({ submissions }: TabContentProps) {
 interface SubmissionCardProps {
   submission: Submission;
   currentJudgeId?: string;
+  showViewDetailsLink?: boolean;
 }
 
 export function SubmissionCard({
   submission,
   currentJudgeId,
+  showViewDetailsLink = false,
 }: SubmissionCardProps) {
   const updateJudging = useMutation(api.submission.updateSubmissionJudging);
   const unsetScore = useMutation(api.submission.unsetSubmissionScore);
@@ -316,9 +318,32 @@ export function SubmissionCard({
     >
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">
-            {submission.projectName}
-          </h3>
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className="text-xl font-semibold text-foreground">
+              {submission.projectName}
+            </h3>
+            {showViewDetailsLink && (
+              <a
+                href={`/judge/${submission._id}`}
+                className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <span>View Details</span>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+              </a>
+            )}
+          </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

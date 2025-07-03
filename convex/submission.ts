@@ -285,6 +285,37 @@ export const getSubmissionsForJudging = query({
   },
 });
 
+// Get a single submission for judging by ID
+export const getSubmissionForJudging = query({
+  args: {
+    submissionId: v.id("submissions"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireAdmin(ctx);
+
+    const submission = await ctx.db.get(args.submissionId);
+    if (!submission) {
+      return null;
+    }
+
+    // Check if submission is qualified (has video, github, and is submitted)
+    if (
+      !submission.videoOverviewUrl ||
+      !submission.githubUrl ||
+      submission.status !== "submitted"
+    ) {
+      return null;
+    }
+
+    // Check if submission is available for this judge (unclaimed or claimed by current judge)
+    if (submission.judgeId && submission.judgeId !== identity.subject) {
+      return null;
+    }
+
+    return submission;
+  },
+});
+
 // Claim a submission for judging
 export const claimSubmission = mutation({
   args: {
