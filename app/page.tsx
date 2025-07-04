@@ -537,10 +537,6 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-white mb-4">
             Ready to Build?
           </h2>
-          <p className="text-white/70 text-lg mb-8">
-            Join the T3 Chat Cloneathon and showcase your development skills.
-            Registration opens soon!
-          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register">
               <Button
