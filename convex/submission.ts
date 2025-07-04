@@ -455,3 +455,136 @@ export const getAllSubmissionsWithSort = query({
     return submissions;
   },
 });
+
+// Get all finalist submissions (submissions with score >= 9)
+export const getFinalistSubmissions = query({
+  args: {},
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const submissions = await ctx.db
+      .query("submissions")
+      .filter((q) => q.gte(q.field("score"), 9))
+      .collect();
+
+    return submissions;
+  },
+});
+
+// Submit a finalist score
+export const submitFinalistScore = mutation({
+  args: {
+    submissionId: v.id("submissions"),
+    score: v.union(
+      v.literal(1),
+      v.literal(2),
+      v.literal(3),
+      v.literal(4),
+      v.literal(5),
+      v.literal(6),
+      v.literal(7),
+      v.literal(8),
+      v.literal(9),
+      v.literal(10)
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireAdmin(ctx);
+
+    const submission = await ctx.db.get(args.submissionId);
+    if (!submission) {
+      throw new Error("Submission not found");
+    }
+
+    if (!submission.score || submission.score < 9) {
+      throw new Error(
+        "Submission must have a score of 9 or higher to be eligible for finalist judging"
+      );
+    }
+
+    // Check if this judge has already scored this submission
+    const existingScores = submission.finalistScores || [];
+    const existingScoreIndex = existingScores.findIndex(
+      (s) => s.judgeId === identity.subject
+    );
+
+    const newScore = {
+      judgeId: identity.subject,
+      score: args.score,
+      submittedAt: Date.now(),
+    };
+
+    let updatedScores;
+    if (existingScoreIndex >= 0) {
+      // Update existing score
+      updatedScores = [...existingScores];
+      updatedScores[existingScoreIndex] = newScore;
+    } else {
+      // Add new score
+      updatedScores = [...existingScores, newScore];
+    }
+
+    // Calculate total score
+    const totalScore = updatedScores.reduce((sum, s) => sum + s.score, 0);
+
+    await ctx.db.patch(args.submissionId, {
+      finalistScores: updatedScores,
+      totalFinalistScore: totalScore,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+// Get top 3 winners based on finalist scores
+export const getTopWinners = query({
+  args: {},
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const finalists = await ctx.db
+      .query("submissions")
+      .filter((q) => q.gte(q.field("score"), 9))
+      .collect();
+
+    // Sort by total finalist score (highest first)
+    finalists.sort((a, b) => {
+      const scoreA = a.totalFinalistScore || 0;
+      const scoreB = b.totalFinalistScore || 0;
+      return scoreB - scoreA; // Descending order
+    });
+
+    // Return top 3
+    return finalists.slice(0, 3);
+  },
+});
+
+// Get finalist submission with judge's score
+export const getFinalistSubmissionForJudge = query({
+  args: {
+    submissionId: v.id("submissions"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireAdmin(ctx);
+
+    const submission = await ctx.db.get(args.submissionId);
+    if (!submission) {
+      return null;
+    }
+
+    if (!submission.score || submission.score < 9) {
+      throw new Error(
+        "Submission must have a score of 9 or higher to be eligible for finalist judging"
+      );
+    }
+
+    // Find this judge's score if it exists
+    const judgeScore = submission.finalistScores?.find(
+      (s) => s.judgeId === identity.subject
+    );
+
+    return {
+      ...submission,
+      judgeScore: judgeScore?.score,
+    };
+  },
+});

@@ -23,6 +23,12 @@ type Submission = {
   judgeId?: string;
   createdAt: number;
   updatedAt: number;
+  finalistScores?: Array<{
+    judgeId: string;
+    score: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+    submittedAt: number;
+  }>;
+  totalFinalistScore?: number;
 };
 
 interface TabContentProps {
@@ -384,6 +390,11 @@ export function SubmissionCard({
             {submission.score && (
               <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
                 Score: {submission.score}/10
+              </span>
+            )}
+            {submission.score && submission.score >= 9 && (
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+                Finalist
               </span>
             )}
             {isClaimedByCurrentJudge && (
