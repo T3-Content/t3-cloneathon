@@ -5,7 +5,9 @@ import { useQuery } from "convex/react";
 import { FinalistSubmissionCard } from "../finalist-submission-card";
 
 export default function FinalistsPage() {
-  const finalistSubmissions = useQuery(api.submission.getFinalistSubmissions);
+  const finalistSubmissions = useQuery(
+    api.submission.getFinalistSubmissionsForJudging
+  );
 
   return (
     <div>
@@ -19,7 +21,8 @@ export default function FinalistsPage() {
         </p>
         <p className="text-sm text-muted-foreground mt-2">
           Each judge can submit one score per finalist. Scores are automatically
-          summed to determine winners.
+          summed to determine winners. Only showing submissions you haven't
+          judged yet.
         </p>
       </div>
 
@@ -45,10 +48,12 @@ export default function FinalistsPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">
-            No Finalists Yet
+            No Finalists to Judge
           </h2>
           <p className="text-muted-foreground mb-4">
-            No submissions have received a score of 9 or higher yet.
+            No submissions are available for finalist judging. Either no
+            submissions have received a score of 9 or higher yet, or you have
+            already judged all available finalists.
           </p>
           <p className="text-sm text-muted-foreground">
             Use the regular judging interface to review submissions. Submissions
@@ -61,6 +66,7 @@ export default function FinalistsPage() {
             <FinalistSubmissionCard
               key={submission._id}
               submission={submission}
+              showViewDetailsLink={true}
             />
           ))}
         </div>

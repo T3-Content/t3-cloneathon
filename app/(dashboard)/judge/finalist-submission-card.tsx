@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
+import Link from "next/link";
 
 type FinalistSubmission = {
   _id: Id<"submissions">;
@@ -32,12 +33,164 @@ type FinalistSubmission = {
   judgeScore?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 };
 
+interface TabContentProps {
+  submissions: FinalistSubmission;
+}
+
+function ProjectTabs({ submissions }: TabContentProps) {
+  const [activeTab, setActiveTab] = useState<string>("description");
+
+  const tabs = [
+    {
+      id: "description",
+      label: "Description",
+      content: submissions.description,
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "favorite",
+      label: "Favorite Parts",
+      content: submissions.favoriteParts,
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "challenges",
+      label: "Challenges",
+      content: submissions.biggestChallenges,
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "testing",
+      label: "Testing",
+      content: submissions.testingInstructions,
+      icon: (
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
+    },
+  ].filter((tab) => tab.content); // Only show tabs that have content
+
+  if (tabs.length === 0) return null;
+
+  // If there's only one tab, show it without the tab interface
+  if (tabs.length === 1) {
+    const singleTab = tabs[0];
+    return (
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="text-blue-500">{singleTab.icon}</div>
+          <h4 className="text-sm font-medium text-foreground">
+            {singleTab.label}
+          </h4>
+        </div>
+        <div className="bg-muted/30 rounded-md p-4 border border-border/50">
+          <p className="text-foreground whitespace-pre-wrap text-sm leading-relaxed">
+            {singleTab.content}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const activeTabData = tabs.find((tab) => tab.id === activeTab) || tabs[0];
+
+  return (
+    <div className="mb-6">
+      {/* Tab Headers */}
+      <div className="flex border-b border-border mb-4">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === tab.id
+                ? "text-primary border-primary"
+                : "text-muted-foreground border-transparent hover:text-foreground hover:border-border"
+            }`}
+          >
+            <div
+              className={
+                activeTab === tab.id ? "text-primary" : "text-muted-foreground"
+              }
+            >
+              {tab.icon}
+            </div>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="bg-muted/30 rounded-md p-4 border border-border/50 min-h-[120px]">
+        <p className="text-foreground whitespace-pre-wrap text-sm leading-relaxed">
+          {activeTabData.content}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 interface FinalistSubmissionCardProps {
   submission: FinalistSubmission;
+  showViewDetailsLink?: boolean;
 }
 
 export function FinalistSubmissionCard({
   submission,
+  showViewDetailsLink = false,
 }: FinalistSubmissionCardProps) {
   const submitFinalistScore = useMutation(api.submission.submitFinalistScore);
   const [selectedScore, setSelectedScore] = useState<
@@ -219,6 +372,9 @@ export function FinalistSubmissionCard({
           </div>
         )}
 
+      {/* Tabbed Project Content */}
+      <ProjectTabs submissions={submission} />
+
       {/* Project Description */}
       {submission.judgeNotes && (
         <div className="mb-6">
@@ -267,6 +423,37 @@ export function FinalistSubmissionCard({
           </p>
         )}
       </div>
+
+      {/* View Submission Button */}
+      {showViewDetailsLink && (
+        <div className="mb-6 flex gap-3">
+          <Link
+            href={`/judge/${submission._id}`}
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+            View Submission
+          </Link>
+        </div>
+      )}
 
       {/* Finalist Scores Summary */}
       {submission.finalistScores && submission.finalistScores.length > 0 && (
