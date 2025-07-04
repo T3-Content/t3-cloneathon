@@ -428,7 +428,7 @@ export default function AllSubmissionsPage() {
                   </td>
                   <td className="px-4 py-4">
                     <a
-                      href={`/judge?id=${submission._id}`}
+                      href={`/judge/${submission._id}`}
                       className="text-primary hover:underline text-sm"
                     >
                       View

@@ -3,14 +3,11 @@
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { usePaginatedQuery, useQuery } from "convex/react";
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import { SubmissionCard } from "./submission-card";
 
 export default function JudgePage() {
   const { user } = useUser();
-  const searchParams = useSearchParams();
-  const specificSubmissionId = searchParams.get("id");
 
   const submissionCounts = useQuery(
     api.submission.getQualifiedSubmissionCounts
@@ -21,6 +18,7 @@ export default function JudgePage() {
     status,
     loadMore,
   } = usePaginatedQuery(
+    // @ts-expect-error - IGNORE FOR NOW
     api.submission.getSubmissionsForJudging,
     {},
     { initialNumItems: 10 }
@@ -28,11 +26,6 @@ export default function JudgePage() {
 
   // Check if user is admin
   const isAdmin = user?.publicMetadata?.role === "admin";
-
-  // If a specific submission ID is provided, filter to just that submission
-  const displaySubmissions = specificSubmissionId
-    ? submissions?.filter((s) => s._id === specificSubmissionId)
-    : submissions;
 
   // Redirect if not admin
   useEffect(() => {
@@ -107,26 +100,16 @@ export default function JudgePage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {displaySubmissions?.map((submission) => (
+          {submissions?.map((submission) => (
             <SubmissionCard
               key={submission._id}
               submission={submission}
               currentJudgeId={user.id}
+              showViewDetailsLink={true}
             />
           ))}
 
-          {displaySubmissions?.length === 0 && specificSubmissionId && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">
-                This submission doesn't exist or doesn't qualify for judging.
-              </p>
-              <a href="/judge" className="text-primary hover:underline">
-                Back to all qualified submissions
-              </a>
-            </div>
-          )}
-
-          {displaySubmissions?.length === 0 && !specificSubmissionId && (
+          {submissions?.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
                 No qualified submissions available for judging.
@@ -134,7 +117,7 @@ export default function JudgePage() {
             </div>
           )}
 
-          {status === "CanLoadMore" && !specificSubmissionId && (
+          {status === "CanLoadMore" && (
             <div className="flex justify-center py-6">
               <button
                 onClick={() => loadMore(10)}

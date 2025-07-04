@@ -285,6 +285,23 @@ export const getSubmissionsForJudging = query({
   },
 });
 
+// Get a single submission for judging by ID
+export const getSubmissionForJudging = query({
+  args: {
+    submissionId: v.id("submissions"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireAdmin(ctx);
+
+    const submission = await ctx.db.get(args.submissionId);
+    if (!submission) {
+      return null;
+    }
+
+    return submission;
+  },
+});
+
 // Claim a submission for judging
 export const claimSubmission = mutation({
   args: {
