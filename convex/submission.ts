@@ -471,6 +471,32 @@ export const getFinalistSubmissions = query({
   },
 });
 
+// Get finalist submissions for judging (excluding already judged by current user)
+export const getFinalistSubmissionsForJudging = query({
+  args: {},
+  handler: async (ctx, args) => {
+    const identity = await requireAdmin(ctx);
+
+    const submissions = await ctx.db
+      .query("submissions")
+      .filter((q) => q.gte(q.field("score"), 9))
+      .collect();
+
+    // Filter out submissions already judged by current user
+    const unjudged = submissions.filter((submission) => {
+      if (!submission.finalistScores) return true;
+      return !submission.finalistScores.some(
+        (score) => score.judgeId === identity.subject
+      );
+    });
+
+    // Sort by creation time (newest first)
+    unjudged.sort((a, b) => b.createdAt - a.createdAt);
+
+    return unjudged;
+  },
+});
+
 // Submit a finalist score
 export const submitFinalistScore = mutation({
   args: {
