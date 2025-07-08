@@ -563,6 +563,31 @@ export const submitFinalistScore = mutation({
 });
 
 // Get top 3 winners based on finalist scores
+export const getTopWinnersIds = query({
+  args: {},
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const finalists = await ctx.db
+      .query("submissions")
+      .filter((q) => q.gte(q.field("score"), 9))
+      .collect();
+
+    // Sort by total finalist score (highest first)
+    finalists.sort((a, b) => {
+      const scoreA = a.totalFinalistScore || 0;
+      const scoreB = b.totalFinalistScore || 0;
+      return scoreB - scoreA; // Descending order
+    });
+
+    // Return top 3
+    return finalists.slice(0, 3).map((s) => ({
+      _id: s._id,
+    }));
+  },
+});
+
+// Get top 3 winners based on finalist scores
 export const getTopWinners = query({
   args: {},
   handler: async (ctx, args) => {
@@ -638,6 +663,14 @@ export const getSharedSubmissions = query({
     // Sort by creation time (newest first)
     submissions.sort((a, b) => b.createdAt - a.createdAt);
 
-    return submissions;
+    return submissions.map((s) => ({
+      _id: s._id,
+      projectName: s.projectName,
+      members: s.members,
+      githubUrl: s.githubUrl,
+      hostedSiteUrl: s.hostedSiteUrl,
+      videoOverviewUrl: s.videoOverviewUrl,
+      status: s.status,
+    }));
   },
 });

@@ -161,7 +161,7 @@ function SubmissionCard({
 
 export default function GalleryPage() {
   const submissions = useQuery(api.submission.getSharedSubmissions);
-  const topWinners = useQuery(api.submission.getTopWinners);
+  const topWinners = useQuery(api.submission.getTopWinnersIds);
 
   // Create a map of winner IDs to their place
   const winnerMap = new Map<string, 1 | 2 | 3>();
