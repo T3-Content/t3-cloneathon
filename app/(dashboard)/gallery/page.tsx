@@ -23,11 +23,6 @@ type Submission = {
   githubUrl: string;
   hostedSiteUrl?: string;
   videoOverviewUrl?: string;
-  description?: string;
-  createdAt: number;
-  shared?: boolean;
-  status: "in-progress" | "submitted";
-  totalFinalistScore?: number;
 };
 
 function SubmissionCard({
