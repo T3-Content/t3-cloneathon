@@ -33,6 +33,7 @@ export const updateSubmission = mutation({
       testingInstructions: v.optional(v.string()),
 
       status: v.union(v.literal("in-progress"), v.literal("submitted")),
+      shared: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, args) => {
@@ -612,5 +613,31 @@ export const getFinalistSubmissionForJudge = query({
       ...submission,
       judgeScore: judgeScore?.score,
     };
+  },
+});
+
+// Get shared submissions for the gallery (only submissions that are shared and submitted)
+export const getSharedSubmissions = query({
+  args: {},
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Not authenticated");
+    }
+
+    const submissions = await ctx.db
+      .query("submissions")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("shared"), true),
+          q.eq(q.field("status"), "submitted")
+        )
+      )
+      .collect();
+
+    // Sort by creation time (newest first)
+    submissions.sort((a, b) => b.createdAt - a.createdAt);
+
+    return submissions;
   },
 });
