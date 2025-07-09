@@ -33,6 +33,7 @@ export const updateSubmission = mutation({
       testingInstructions: v.optional(v.string()),
 
       status: v.union(v.literal("in-progress"), v.literal("submitted")),
+      shared: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, args) => {
@@ -562,6 +563,31 @@ export const submitFinalistScore = mutation({
 });
 
 // Get top 3 winners based on finalist scores
+export const getTopWinnersIds = query({
+  args: {},
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const finalists = await ctx.db
+      .query("submissions")
+      .filter((q) => q.gte(q.field("score"), 9))
+      .collect();
+
+    // Sort by total finalist score (highest first)
+    finalists.sort((a, b) => {
+      const scoreA = a.totalFinalistScore || 0;
+      const scoreB = b.totalFinalistScore || 0;
+      return scoreB - scoreA; // Descending order
+    });
+
+    // Return top 3
+    return finalists.slice(0, 3).map((s) => ({
+      _id: s._id,
+    }));
+  },
+});
+
+// Get top 3 winners based on finalist scores
 export const getTopWinners = query({
   args: {},
   handler: async (ctx, args) => {
@@ -612,5 +638,39 @@ export const getFinalistSubmissionForJudge = query({
       ...submission,
       judgeScore: judgeScore?.score,
     };
+  },
+});
+
+// Get shared submissions for the gallery (only submissions that are shared and submitted)
+export const getSharedSubmissions = query({
+  args: {},
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Not authenticated");
+    }
+
+    const submissions = await ctx.db
+      .query("submissions")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("shared"), true),
+          q.eq(q.field("status"), "submitted")
+        )
+      )
+      .collect();
+
+    // Sort by creation time (newest first)
+    submissions.sort((a, b) => b.createdAt - a.createdAt);
+
+    return submissions.map((s) => ({
+      _id: s._id,
+      projectName: s.projectName,
+      members: s.members,
+      githubUrl: s.githubUrl,
+      hostedSiteUrl: s.hostedSiteUrl,
+      videoOverviewUrl: s.videoOverviewUrl,
+      status: s.status,
+    }));
   },
 });

@@ -30,6 +30,12 @@ const TopNav = () => {
           >
             Register
           </Link>
+          <Link
+            href="/gallery"
+            style={{ color: "#fff", textDecoration: "none", fontSize: 14 }}
+          >
+            Gallery
+          </Link>
           {isAdmin && (
             <Link
               href="/judge"

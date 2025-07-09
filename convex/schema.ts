@@ -22,6 +22,9 @@ export default defineSchema({
 
     status: v.union(v.literal("in-progress"), v.literal("submitted")),
 
+    // Gallery sharing field
+    shared: v.optional(v.boolean()),
+
     // Admin judging fields
     reviewed: v.optional(v.boolean()),
     judgeId: v.optional(v.string()), // ID of the judge who claimed this submission

@@ -42,6 +42,7 @@ export function UpdateSubmission() {
     biggestChallenges: "",
     testingInstructions: "",
     status: "in-progress" as "in-progress" | "submitted",
+    shared: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +71,7 @@ export function UpdateSubmission() {
         biggestChallenges: currentSubmission.biggestChallenges || "",
         testingInstructions: currentSubmission.testingInstructions || "",
         status: currentSubmission.status || "in-progress",
+        shared: currentSubmission.shared || false,
       });
     } else if (username) {
       // Set username as first team member for new submissions
@@ -467,6 +469,33 @@ export function UpdateSubmission() {
                   <p className="text-xs text-white/60">
                     You must agree to the terms and conditions to submit your
                     entry.
+                  </p>
+                </div>
+              </div>
+
+              {/* Share in Gallery */}
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="shared"
+                  checked={formData.shared}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      shared: checked === "indeterminate" ? false : checked,
+                    }))
+                  }
+                  className="border-white/20 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <Label
+                    htmlFor="shared"
+                    className="text-sm font-medium leading-none text-white peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Share my submission in the gallery
+                  </Label>
+                  <p className="text-xs text-white/60">
+                    Allow other participants to view your project in the
+                    submissions gallery.
                   </p>
                 </div>
               </div>
