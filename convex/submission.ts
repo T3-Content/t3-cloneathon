@@ -566,8 +566,6 @@ export const submitFinalistScore = mutation({
 export const getTopWinnersIds = query({
   args: {},
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-
     const finalists = await ctx.db
       .query("submissions")
       .filter((q) => q.gte(q.field("score"), 9))
